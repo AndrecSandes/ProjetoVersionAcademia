@@ -90,7 +90,7 @@ public class TelaPrincipal extends JFrame {
         menuLateral.setBorder(new EmptyBorder(20, 0, 20, 0));
         
         // Logo/Título no menu
-        JLabel lblLogo = new JLabel(" MENU PRINCIPAL");
+        JLabel lblLogo = new JLabel("MENU PRINCIPAL");
         lblLogo.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblLogo.setForeground(COR_TEXTO_MENU);
         lblLogo.setBorder(new EmptyBorder(10, 20, 20, 20));
@@ -221,7 +221,6 @@ public class TelaPrincipal extends JFrame {
         areaConteudo.add(new PainelPlanos(), "Gerenciar Planos");
         areaConteudo.add(new PainelFinanceiro(), "Controle Financeiro");
         areaConteudo.add(new PainelPagamentos(), "Pagamentos");
-        areaConteudo.add(new PainelMensalidades(), "Mensalidades");
         areaConteudo.add(new PainelRelatorios(), "Visualizar Relatórios");
         areaConteudo.add(estatisticas, "Estatísticas");
         areaConteudo.add(criarPainelPersonais(), "Gerenciar Personais");

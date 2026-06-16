@@ -17,6 +17,8 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class PainelPagamentos extends JPanel {
     private static final long serialVersionUID = 1L;
@@ -34,12 +36,23 @@ public class PainelPagamentos extends JPanel {
     private JComboBox<FormaPagamento> cbFormaPagamento;
     private JTextField txtCompetencia;
     
+    // Componentes de mensalidade
+    private JComboBox<String> cbMesFiltro;
+    private JComboBox<String> cbAnoFiltro;
+    private JLabel lblTotalMensalidade;
+    private JTable tabelaMensalidade;
+    private DefaultTableModel modeloTabelaMensalidade;
+    private JTabbedPane tabbedPane;
+    
     private final Color COR_FUNDO = new Color(240, 242, 245);
     private final Color COR_PAINEL_BRANCO = Color.WHITE;
     private final Color COR_BORDA = new Color(180, 180, 180);
     private final Color COR_BOTAO_VERDE = new Color(46, 204, 113);
     private final Color COR_BOTAO_AZUL = new Color(41, 128, 185);
     private final Color COR_BOTAO_AMARELO = new Color(241, 196, 15);
+    private final Color COR_PAGO = new Color(46, 204, 113);
+    private final Color COR_PENDENTE = new Color(241, 196, 15);
+    private final Color COR_ATRASADO = new Color(231, 76, 60);
     
     public PainelPagamentos() {
         financeiroController = new FinanceiroController();
@@ -49,6 +62,7 @@ public class PainelPagamentos extends JPanel {
         initComponents();
         carregarDados();
         carregarPlanos();
+        carregarMensalidades();
     }
     
     private void initComponents() {
@@ -56,39 +70,35 @@ public class PainelPagamentos extends JPanel {
         setBackground(COR_FUNDO);
         setBorder(BorderFactory.createLineBorder(COR_BORDA, 1));
         
-        JPanel formPanel = criarFormulario();
-        add(formPanel, BorderLayout.NORTH);
+        // Abas
+        tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
         
-        JPanel tablePanel = criarPainelTabela();
-        add(tablePanel, BorderLayout.CENTER);
+        // Aba 1: Registrar Pagamento
+        JPanel registroPanel = criarPainelRegistro();
+        tabbedPane.addTab("Registrar Pagamento", registroPanel);
         
-        JPanel botoesPanel = criarBotoesAcao();
-        add(botoesPanel, BorderLayout.SOUTH);
+        // Aba 2: Histórico de Pagamentos
+        JPanel historicoPanel = criarPainelHistorico();
+        tabbedPane.addTab("Histórico de Pagamentos", historicoPanel);
+        
+        // Aba 3: Mensalidades
+        JPanel mensalidadePanel = criarPainelMensalidade();
+        tabbedPane.addTab("Mensalidades", mensalidadePanel);
+        
+        add(tabbedPane, BorderLayout.CENTER);
     }
     
-    private void carregarPlanos() {
-        try {
-            cbPlano.removeAllItems();
-            List<Plano> planos = planoController.listarTodos();
-            for (Plano p : planos) {
-                cbPlano.addItem(p);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+    // ==================== PAINEL REGISTRAR PAGAMENTO ====================
     
-    private JPanel criarFormulario() {
+    private JPanel criarPainelRegistro() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(COR_PAINEL_BRANCO);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(COR_BORDA, 1),
-            new EmptyBorder(15, 15, 15, 15)
-        ));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(8, 8, 8, 8);
         
         // Buscar Aluno por ID
         gbc.gridx = 0; gbc.gridy = 0;
@@ -106,7 +116,6 @@ public class PainelPagamentos extends JPanel {
         btnBuscarAluno.setForeground(Color.WHITE);
         btnBuscarAluno.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnBuscarAluno.setFocusPainted(false);
-        btnBuscarAluno.setBorderPainted(false);
         btnBuscarAluno.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBuscarAluno.addActionListener(e -> buscarAlunoPorId());
         panel.add(btnBuscarAluno, gbc);
@@ -124,7 +133,7 @@ public class PainelPagamentos extends JPanel {
         panel.add(lblAlunoNome, gbc);
         gbc.gridwidth = 1;
         
-        // Plano - COM RENDERER PARA MOSTRAR O NOME CORRETAMENTE
+        // Plano
         gbc.gridx = 0; gbc.gridy = 1;
         JLabel lblPlano = new JLabel("Plano:");
         lblPlano.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -134,8 +143,6 @@ public class PainelPagamentos extends JPanel {
         cbPlano = new JComboBox<>();
         cbPlano.setPreferredSize(new Dimension(200, 30));
         cbPlano.addActionListener(e -> atualizarValorPorPlano());
-        
-        // Renderer para mostrar o nome do plano em vez do endereço de memória
         cbPlano.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -146,11 +153,10 @@ public class PainelPagamentos extends JPanel {
                 return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
             }
         });
-        
         panel.add(cbPlano, gbc);
         gbc.gridwidth = 1;
         
-        // Valor (R$) - APENAS ESTE, SEM O OUTRO
+        // Valor
         gbc.gridx = 3; gbc.gridy = 1;
         JLabel lblValor = new JLabel("Valor (R$):");
         lblValor.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -194,21 +200,168 @@ public class PainelPagamentos extends JPanel {
         btnRegistrar.setForeground(Color.WHITE);
         btnRegistrar.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnRegistrar.setFocusPainted(false);
-        btnRegistrar.setBorderPainted(false);
-        btnRegistrar.setOpaque(true);
         btnRegistrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRegistrar.addActionListener(e -> registrarPagamento());
         panel.add(btnRegistrar, gbc);
-        gbc.gridwidth = 1;
         
         return panel;
+    }
+    
+    // ==================== PAINEL HISTÓRICO ====================
+    
+    private JPanel criarPainelHistorico() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(COR_PAINEL_BRANCO);
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
+        String[] colunas = {"ID", "Aluno", "Valor", "Data", "Forma", "Competência", "Status"};
+        modeloTabela = new DefaultTableModel(colunas, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        
+        tabelaPagamentos = new JTable(modeloTabela);
+        tabelaPagamentos.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tabelaPagamentos.getTableHeader().setBackground(new Color(44, 62, 80));
+        tabelaPagamentos.getTableHeader().setForeground(Color.WHITE);
+        tabelaPagamentos.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        tabelaPagamentos.setRowHeight(35);
+        tabelaPagamentos.setSelectionBackground(COR_BOTAO_AZUL);
+        tabelaPagamentos.setSelectionForeground(Color.WHITE);
+        
+        JScrollPane scroll = new JScrollPane(tabelaPagamentos);
+        panel.add(scroll, BorderLayout.CENTER);
+        
+        // Botão Editar Status
+        JPanel botoesPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        botoesPanel.setBackground(COR_PAINEL_BRANCO);
+        
+        JButton btnEditarStatus = new JButton("Editar Status do Pagamento");
+        btnEditarStatus.setBackground(COR_BOTAO_AMARELO);
+        btnEditarStatus.setForeground(Color.WHITE);
+        btnEditarStatus.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnEditarStatus.setFocusPainted(false);
+        btnEditarStatus.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnEditarStatus.addActionListener(e -> editarStatusPagamento());
+        botoesPanel.add(btnEditarStatus);
+        
+        panel.add(botoesPanel, BorderLayout.SOUTH);
+        
+        return panel;
+    }
+    
+    // ==================== PAINEL MENSALIDADES ====================
+    
+    private JPanel criarPainelMensalidade() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(COR_FUNDO);
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
+        // Filtro
+        JPanel filtroPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        filtroPanel.setBackground(Color.WHITE);
+        filtroPanel.setBorder(BorderFactory.createLineBorder(COR_BORDA, 1));
+        
+        filtroPanel.add(new JLabel("Mês:"));
+        cbMesFiltro = new JComboBox<>(new String[]{"Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"});
+        cbMesFiltro.setSelectedIndex(LocalDate.now().getMonthValue() - 1);
+        filtroPanel.add(cbMesFiltro);
+        
+        filtroPanel.add(new JLabel("Ano:"));
+        cbAnoFiltro = new JComboBox<>();
+        int anoAtual = LocalDate.now().getYear();
+        for (int i = anoAtual - 1; i <= anoAtual + 1; i++) {
+            cbAnoFiltro.addItem(String.valueOf(i));
+        }
+        cbAnoFiltro.setSelectedItem(String.valueOf(anoAtual));
+        filtroPanel.add(cbAnoFiltro);
+        
+        JButton btnFiltrar = new JButton("Filtrar");
+        btnFiltrar.setBackground(COR_BOTAO_AZUL);
+        btnFiltrar.setForeground(Color.WHITE);
+        btnFiltrar.setFocusPainted(false);
+        btnFiltrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnFiltrar.addActionListener(e -> carregarMensalidades());
+        filtroPanel.add(btnFiltrar);
+        
+        panel.add(filtroPanel, BorderLayout.NORTH);
+        
+        // Tabela
+        String[] colunasMensalidade = {"Aluno", "Valor", "Status"};
+        modeloTabelaMensalidade = new DefaultTableModel(colunasMensalidade, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        
+        tabelaMensalidade = new JTable(modeloTabelaMensalidade);
+        tabelaMensalidade.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tabelaMensalidade.getTableHeader().setBackground(new Color(44, 62, 80));
+        tabelaMensalidade.getTableHeader().setForeground(Color.WHITE);
+        tabelaMensalidade.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        tabelaMensalidade.setRowHeight(35);
+        
+        // Cores na tabela
+        tabelaMensalidade.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected && column == 2) {
+                    String status = (String) table.getValueAt(row, 2);
+                    if ("PAGO".equals(status)) {
+                        c.setBackground(COR_PAGO);
+                        c.setForeground(Color.WHITE);
+                    } else if ("PENDENTE".equals(status)) {
+                        c.setBackground(COR_PENDENTE);
+                        c.setForeground(Color.BLACK);
+                    } else {
+                        c.setBackground(COR_ATRASADO);
+                        c.setForeground(Color.WHITE);
+                    }
+                } else if (!isSelected) {
+                    c.setBackground(Color.WHITE);
+                    c.setForeground(Color.BLACK);
+                }
+                return c;
+            }
+        });
+        
+        JScrollPane scroll = new JScrollPane(tabelaMensalidade);
+        panel.add(scroll, BorderLayout.CENTER);
+        
+        // Total
+        lblTotalMensalidade = new JLabel("Total arrecadado: R$ 0,00");
+        lblTotalMensalidade.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTotalMensalidade.setForeground(COR_BOTAO_AZUL);
+        lblTotalMensalidade.setBorder(new EmptyBorder(10, 10, 10, 10));
+        panel.add(lblTotalMensalidade, BorderLayout.SOUTH);
+        
+        return panel;
+    }
+    
+    // ==================== MÉTODOS ====================
+    
+    private void carregarPlanos() {
+        try {
+            cbPlano.removeAllItems();
+            List<Plano> planos = planoController.listarTodos();
+            for (Plano p : planos) {
+                cbPlano.addItem(p);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     private void buscarAlunoPorId() {
         try {
             String idStr = txtBuscaAluno.getText().trim();
             if (idStr.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Digite o ID do aluno!", "Aviso", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Digite o ID do aluno!");
                 return;
             }
             
@@ -225,19 +378,18 @@ public class PainelPagamentos extends JPanel {
             lblAlunoNome.setForeground(new Color(46, 204, 113));
             
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "ID inválido!", "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "ID inválido!");
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Erro: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Erro: " + e.getMessage());
         }
     }
     
     private void atualizarValorPorPlano() {
         Plano planoSelecionado = (Plano) cbPlano.getSelectedItem();
         if (planoSelecionado != null) {
-            // Encontrar o JLabel do valor exibido
-            Component[] components = ((JPanel) getComponent(0)).getComponents();
+            Component[] components = ((JPanel) tabbedPane.getComponentAt(0)).getComponents();
             for (Component c : components) {
-                if (c instanceof JLabel && ((JLabel) c).getFont().getSize() == 14 && ((JLabel) c).getForeground() == COR_BOTAO_VERDE) {
+                if (c instanceof JLabel && ((JLabel) c).getFont().getSize() == 14) {
                     ((JLabel) c).setText(String.format("%.2f", planoSelecionado.getValor()));
                     break;
                 }
@@ -258,13 +410,13 @@ public class PainelPagamentos extends JPanel {
         try {
             Aluno alunoSelecionado = getAlunoSelecionado();
             if (alunoSelecionado == null) {
-                JOptionPane.showMessageDialog(this, "Busque e selecione um aluno válido!", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Busque e selecione um aluno válido!");
                 return;
             }
             
             Plano plano = (Plano) cbPlano.getSelectedItem();
             if (plano == null) {
-                JOptionPane.showMessageDialog(this, "Selecione um plano!", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Selecione um plano!");
                 return;
             }
             
@@ -276,161 +428,25 @@ public class PainelPagamentos extends JPanel {
             
             Matricula matricula = matriculaController.buscarPorAluno(alunoSelecionado);
             if (matricula == null) {
-                JOptionPane.showMessageDialog(this, "Aluno não possui matrícula ativa!\n\nClique em 'Ver Matrícula' para criar uma.", "Erro", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Aluno não possui matrícula ativa!");
                 return;
             }
             
             Pagamento pagamento = new Pagamento(alunoSelecionado, matricula, plano.getValor(), forma, competencia);
             financeiroController.registrarPagamento(pagamento);
             
-            JOptionPane.showMessageDialog(this, 
-                "Pagamento registrado com sucesso!\n\n" +
-                "Aluno: " + alunoSelecionado.getNomeCompleto() + "\n" +
-                "Plano: " + plano.getNome() + "\n" +
-                "Valor: R$ " + String.format("%.2f", plano.getValor()) + "\n" +
-                "Forma: " + forma,
-                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Pagamento registrado com sucesso!");
             
             txtBuscaAluno.setText("");
             lblAlunoNome.setText("Nenhum aluno selecionado");
             lblAlunoNome.setForeground(Color.GRAY);
-            carregarDados();
             
-            // ATUALIZAR OUTRAS TELAS APÓS REGISTRAR O PAGAMENTO
+            carregarDados();
+            carregarMensalidades();
             atualizarOutrasTelas();
             
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Erro ao registrar: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
-    private void atualizarOutrasTelas() {
-        try {
-            JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(this);
-            
-            // Percorre todos os componentes da janela principal
-            for (Component comp : parent.getContentPane().getComponents()) {
-                if (comp instanceof JPanel) {
-                    JPanel panel = (JPanel) comp;
-                    
-                    // Procura pelos painéis que precisam ser atualizados
-                    for (Component c : panel.getComponents()) {
-                        if (c instanceof PainelDashboard) {
-                            ((PainelDashboard) c).atualizar();
-                            System.out.println("Dashboard atualizado");
-                        }
-                        if (c instanceof PainelFinanceiro) {
-                            ((PainelFinanceiro) c).atualizar();
-                            System.out.println("Financeiro atualizado");
-                        }
-                        if (c instanceof PainelMensalidades) {
-                            ((PainelMensalidades) c).atualizar();
-                            System.out.println("Mensalidades atualizado");
-                        }
-                        if (c instanceof PainelAlunos) {
-                            ((PainelAlunos) c).carregarDados();
-                            System.out.println("Alunos atualizado");
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Erro ao atualizar outras telas: " + e.getMessage());
-        }
-    }
-    
-    private JPanel criarPainelTabela() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(COR_PAINEL_BRANCO);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(COR_BORDA, 1),
-            new EmptyBorder(10, 10, 10, 10)
-        ));
-        
-        String[] colunas = {"ID", "Aluno", "Valor", "Data Pagamento", "Forma Pagamento", "Competência", "Status"};
-        modeloTabela = new DefaultTableModel(colunas, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        
-        tabelaPagamentos = new JTable(modeloTabela);
-        
-        tabelaPagamentos.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tabelaPagamentos.getTableHeader().setBackground(new Color(44, 62, 80));
-        tabelaPagamentos.getTableHeader().setForeground(Color.WHITE);
-        tabelaPagamentos.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        tabelaPagamentos.setRowHeight(30);
-        tabelaPagamentos.setSelectionBackground(COR_BOTAO_AZUL);
-        tabelaPagamentos.setSelectionForeground(Color.WHITE);
-        
-        JScrollPane scrollPane = new JScrollPane(tabelaPagamentos);
-        scrollPane.setBorder(BorderFactory.createLineBorder(COR_BORDA, 1));
-        
-        panel.add(scrollPane, BorderLayout.CENTER);
-        
-        return panel;
-    }
-    
-    private JPanel criarBotoesAcao() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        panel.setBackground(COR_PAINEL_BRANCO);
-        panel.setBorder(BorderFactory.createLineBorder(COR_BORDA, 1));
-        
-        JButton btnEditarStatus = new JButton("Editar Status do Pagamento");
-        btnEditarStatus.setBackground(COR_BOTAO_AMARELO);
-        btnEditarStatus.setForeground(Color.WHITE);
-        btnEditarStatus.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnEditarStatus.setFocusPainted(false);
-        btnEditarStatus.setBorderPainted(false);
-        btnEditarStatus.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnEditarStatus.addActionListener(e -> editarStatusPagamento());
-        
-        panel.add(btnEditarStatus);
-        
-        return panel;
-    }
-    
-    private void editarStatusPagamento() {
-        int selectedRow = tabelaPagamentos.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this,
-                "Selecione um pagamento para editar o status",
-                "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        
-        String[] opcoes = {"PAGO", "PENDENTE", "ATRASADO"};
-        String statusAtual = (String) modeloTabela.getValueAt(selectedRow, 6);
-        
-        String novoStatus = (String) JOptionPane.showInputDialog(this,
-            "Selecione o novo status do pagamento:\n\n" +
-            "Pagamento ID: " + modeloTabela.getValueAt(selectedRow, 0) + "\n" +
-            "Aluno: " + modeloTabela.getValueAt(selectedRow, 1) + "\n" +
-            "Valor: " + modeloTabela.getValueAt(selectedRow, 2),
-            "Editar Status",
-            JOptionPane.QUESTION_MESSAGE,
-            null,
-            opcoes,
-            statusAtual);
-        
-        if (novoStatus != null && !novoStatus.equals(statusAtual)) {
-            try {
-                int pagamentoId = (int) modeloTabela.getValueAt(selectedRow, 0);
-                // Aqui você implementaria a atualização no banco
-                // Por enquanto, apenas atualiza a tabela visualmente
-                modeloTabela.setValueAt(novoStatus, selectedRow, 6);
-                
-                JOptionPane.showMessageDialog(this,
-                    "Status do pagamento atualizado para: " + novoStatus,
-                    "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this,
-                    "Erro ao atualizar status: " + e.getMessage(),
-                    "Erro", JOptionPane.ERROR_MESSAGE);
-            }
+            JOptionPane.showMessageDialog(this, "Erro ao registrar: " + e.getMessage());
         }
     }
     
@@ -464,6 +480,124 @@ public class PainelPagamentos extends JPanel {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+    
+    private void editarStatusPagamento() {
+        int selectedRow = tabelaPagamentos.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Selecione um pagamento na tabela!");
+            return;
+        }
+        
+        int pagamentoId = (int) modeloTabela.getValueAt(selectedRow, 0);
+        String statusAtual = (String) modeloTabela.getValueAt(selectedRow, 6);
+        
+        String[] opcoes = {"PAGO", "PENDENTE", "ATRASADO"};
+        
+        String novoStatus = (String) JOptionPane.showInputDialog(this,
+            "Pagamento ID: " + pagamentoId + "\n" +
+            "Aluno: " + modeloTabela.getValueAt(selectedRow, 1) + "\n" +
+            "Valor: " + modeloTabela.getValueAt(selectedRow, 2) + "\n\n" +
+            "Novo status:",
+            "Editar Status",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            opcoes,
+            statusAtual);
+        
+        if (novoStatus != null && !novoStatus.equals(statusAtual)) {
+            try {
+                java.sql.Connection conn = dao.ConexaoBD.getConexao();
+                java.sql.PreparedStatement stmt = conn.prepareStatement(
+                    "UPDATE pagamentos SET status = ? WHERE id = ?");
+                stmt.setString(1, novoStatus);
+                stmt.setInt(2, pagamentoId);
+                stmt.executeUpdate();
+                stmt.close();
+                conn.close();
+                
+                modeloTabela.setValueAt(novoStatus, selectedRow, 6);
+                
+                JOptionPane.showMessageDialog(this, "Status atualizado para: " + novoStatus);
+                
+                carregarMensalidades();
+                atualizarOutrasTelas();
+                
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Erro: " + e.getMessage());
+            }
+        }
+    }
+    
+    private void carregarMensalidades() {
+        try {
+            modeloTabelaMensalidade.setRowCount(0);
+            
+            int mes = cbMesFiltro.getSelectedIndex() + 1;
+            int ano = Integer.parseInt((String) cbAnoFiltro.getSelectedItem());
+            
+            LocalDate inicio = LocalDate.of(ano, mes, 1);
+            LocalDate fim = inicio.withDayOfMonth(inicio.lengthOfMonth());
+            
+            List<Pagamento> pagamentos = financeiroController.getPagamentosPorPeriodo(inicio, fim);
+            List<Aluno> alunos = alunoController.listarTodos();
+            
+            java.util.Map<Integer, Pagamento> pagamentosMap = new HashMap<>();
+            for (Pagamento p : pagamentos) {
+                if (p.getAluno() != null) {
+                    pagamentosMap.put(p.getAluno().getId(), p);
+                }
+            }
+            
+            double total = 0;
+            
+            for (Aluno a : alunos) {
+                Pagamento p = pagamentosMap.get(a.getId());
+                String status;
+                String valor;
+                
+                if (p != null) {
+                    status = "PAGO";
+                    valor = String.format("R$ %.2f", p.getValor());
+                    total += p.getValor();
+                } else {
+                    if (a.getStatus() == Aluno.StatusAluno.ATIVO) {
+                        status = "ATRASADO";
+                    } else {
+                        status = "PENDENTE";
+                    }
+                    valor = "R$ 0,00";
+                }
+                
+                modeloTabelaMensalidade.addRow(new Object[]{a.getNomeCompleto(), valor, status});
+            }
+            
+            lblTotalMensalidade.setText(String.format("Total arrecadado em %s/%d: R$ %.2f", 
+                cbMesFiltro.getSelectedItem(), ano, total));
+                
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private void atualizarOutrasTelas() {
+        try {
+            JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(this);
+            for (Component comp : parent.getContentPane().getComponents()) {
+                if (comp instanceof JPanel) {
+                    for (Component c : ((JPanel) comp).getComponents()) {
+                        if (c instanceof PainelDashboard) {
+                            ((PainelDashboard) c).atualizar();
+                        }
+                        if (c instanceof PainelFinanceiro) {
+                            ((PainelFinanceiro) c).atualizar();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Erro ao atualizar: " + e.getMessage());
         }
     }
 }
