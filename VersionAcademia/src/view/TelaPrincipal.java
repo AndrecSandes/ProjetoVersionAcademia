@@ -101,7 +101,7 @@ public class TelaPrincipal extends JFrame {
         adicionarItemMenu(" Dashboard", new String[]{" Visão Geral", " Estatísticas"});
         adicionarItemMenu(" Alunos", new String[]{" Gerenciar Alunos"});
         adicionarItemMenu(" Planos", new String[]{" Gerenciar Planos"});
-        adicionarItemMenu(" Financeiro", new String[]{" Controle Financeiro", " Pagamentos", " Mensalidades"});
+        adicionarItemMenu(" Financeiro", new String[]{" Controle Financeiro", " Pagamentos"});
         adicionarItemMenu(" Personais", new String[]{" Gerenciar Personais"});
         adicionarItemMenu(" Relatórios", new String[]{" Visualizar Relatórios"});
         adicionarItemMenu(" Sobre", new String[]{" Sobre o Sistema"});

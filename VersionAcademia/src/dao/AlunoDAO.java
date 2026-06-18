@@ -92,7 +92,7 @@ public class AlunoDAO {
     
     public List<Aluno> listarTodos() throws SQLException {
         List<Aluno> alunos = new ArrayList<>();
-        String sql = "SELECT * FROM alunos ORDER BY nome_completo ASC";
+        String sql = "SELECT * FROM alunos ORDER BY id ASC";
         
         try (Connection conn = ConexaoBD.getConexao();
              PreparedStatement stmt = conn.prepareStatement(sql);

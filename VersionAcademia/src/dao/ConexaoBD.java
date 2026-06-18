@@ -9,8 +9,8 @@ public class ConexaoBD {
     private static final String URL =
             "jdbc:mysql://localhost:3306/versionacademia?useSSL=false&serverTimezone=America/Fortaleza";
 
-    private static final String USUARIO = "";
-    private static final String SENHA = "";
+    private static final String USUARIO = "root";
+    private static final String SENHA = "swag";
 
     static {
         try {

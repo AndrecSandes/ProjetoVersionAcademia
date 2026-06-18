@@ -61,4 +61,14 @@ public class FinanceiroController {
         }
         return 0;
     }
+    
+    public double getMargemLucro() throws SQLException {
+        double faturamento = getFaturamentoTotalMes(LocalDate.now());
+        return faturamento * 0.35;
+    }
+    
+    // NOVO MÉTODO: Verifica se já existe pagamento para o aluno no mês/ano
+    public boolean verificarPagamentoMes(int alunoId, int mes, int ano) throws SQLException {
+        return pagamentoDAO.verificarPagamentoMes(alunoId, mes, ano);
+    }
 }

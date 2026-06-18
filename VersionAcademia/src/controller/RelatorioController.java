@@ -17,7 +17,7 @@ public class RelatorioController {
     
     public List<Aluno> getAlunosPorStatus(String status) throws SQLException {
         List<Aluno> alunos = new ArrayList<>();
-        String sql = "SELECT * FROM alunos WHERE status = ? ORDER BY nome_completo";
+        String sql = "SELECT * FROM alunos WHERE status = ? ORDER BY id ASC";
         
         try (Connection conn = ConexaoBD.getConexao();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -48,7 +48,7 @@ public class RelatorioController {
                      "JOIN alunos a ON m.aluno_id = a.id " +
                      "JOIN planos p ON m.plano_id = p.id " +
                      "WHERE m.situacao = 'VENCIDA' " +
-                     "ORDER BY m.proximo_vencimento";
+                     "ORDER BY m.id ASC";
         
         try (Connection conn = ConexaoBD.getConexao();
              Statement stmt = conn.createStatement();
@@ -75,7 +75,7 @@ public class RelatorioController {
         List<Map<String, Object>> receitas = new ArrayList<>();
         String sql = "SELECT MONTH(data_pagamento) as mes, SUM(valor) as total, COUNT(*) as quantidade " +
                      "FROM pagamentos WHERE YEAR(data_pagamento) = ? AND status = 'PAGO' " +
-                     "GROUP BY MONTH(data_pagamento) ORDER BY mes";
+                     "GROUP BY MONTH(data_pagamento) ORDER BY mes ASC";
         
         try (Connection conn = ConexaoBD.getConexao();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -121,7 +121,7 @@ public class RelatorioController {
                      "FROM planos p " +
                      "LEFT JOIN matriculas m ON p.id = m.plano_id AND m.situacao = 'ATIVA' " +
                      "GROUP BY p.id, p.nome, p.valor " +
-                     "ORDER BY total_alunos DESC";
+                     "ORDER BY total_alunos DESC, p.id ASC";
         
         try (Connection conn = ConexaoBD.getConexao();
              Statement stmt = conn.createStatement();
@@ -144,7 +144,6 @@ public class RelatorioController {
     public List<Map<String, Object>> getFrequenciaAlunos(int mes, int ano) throws SQLException {
         List<Map<String, Object>> frequencia = new ArrayList<>();
         
-        // Conta quantos pagamentos cada aluno fez no mês/ano (simula frequência)
         String sql = "SELECT a.id, a.nome_completo, a.cpf, COUNT(p.id) as quantidade_pagamentos " +
                      "FROM alunos a " +
                      "LEFT JOIN pagamentos p ON a.id = p.aluno_id " +
@@ -152,7 +151,7 @@ public class RelatorioController {
                      "AND p.status = 'PAGO' " +
                      "WHERE a.status = 'ATIVO' " +
                      "GROUP BY a.id, a.nome_completo, a.cpf " +
-                     "ORDER BY quantidade_pagamentos DESC";
+                     "ORDER BY a.id ASC";
         
         try (Connection conn = ConexaoBD.getConexao();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -167,7 +166,6 @@ public class RelatorioController {
                     row.put("cpf", rs.getString("cpf"));
                     row.put("frequencia", rs.getInt("quantidade_pagamentos"));
                     
-                    // Classifica a frequência
                     int freq = rs.getInt("quantidade_pagamentos");
                     if (freq >= 4) {
                         row.put("classificacao", "Excelente");
@@ -176,7 +174,7 @@ public class RelatorioController {
                     } else if (freq == 1) {
                         row.put("classificacao", "Baixa");
                     } else {
-                        row.put("classificacao", "Sem presença");
+                        row.put("classificacao", "Sem presenca");
                     }
                     frequencia.add(row);
                 }
